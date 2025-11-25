@@ -9,11 +9,23 @@ export class Game extends Phaser.Scene {
     this.winner = false;
     this.currentScore = 0;
     this.maxScore = 0;
+    this.donutsPerBox = 25;
   }
 
   create() {
     this.cameras.main.setBackgroundColor(0x313131);
-    // this.sound.play("background_music", { loop: true, volume: 0.3 });
+    this.sound.play("background_music", { loop: true, volume: 0.3 });
+
+    // Create finger click animations
+    this.anims.create({
+      key: "fingerclick",
+      frames: this.anims.generateFrameNumbers("fingerclick", {
+        start: 0,
+        end: 23,
+      }),
+      frameRate: 30,
+      repeat: -1,
+    });
 
     const width = this.scale.width;
     const height = this.scale.height;
@@ -30,7 +42,7 @@ export class Game extends Phaser.Scene {
     const spacingY = 120;
 
     const cols = Math.floor((width - 80) / spacingX);
-    const rows = Math.floor((height - 100) / spacingY);
+    const rows = 15;
 
     // Spawn Donuts
     for (let i = 0; i < rows; i++) {
@@ -38,7 +50,7 @@ export class Game extends Phaser.Scene {
         const key =
           this.donutList[Math.floor(Math.random() * this.donutList.length)];
         const x = 100 + j * spacingX;
-        const y = 100 + i * spacingY;
+        const y = 300 - i * spacingY;
         let donut = this.matter.add.image(x, y, key);
         donut.type = key;
 
@@ -46,7 +58,7 @@ export class Game extends Phaser.Scene {
         donut.setCircle((donut.width * 0.5) / 2);
         donut.setBounce(0.2);
         donut.setFriction(0.05);
-        donut.setMass(1);
+        donut.setMass(2);
 
         donut.setInteractive();
         donut.on("pointerdown", () => this.onClickDonut(donut));
@@ -66,8 +78,9 @@ export class Game extends Phaser.Scene {
       const boxImg = this.add.image(0, 0, "box");
       const donut = this.add.image(0, -30, this.donutList[i]).setScale(0.5);
 
+      boxContainer.donutCounts = this.donutsPerBox;
       const text = this.add
-        .text(0, 60, "x11", {
+        .text(0, 60, "x" + boxContainer.donutCounts, {
           fontFamily: "Arial Black",
           fontSize: "50px",
           color: "#ffffff",
@@ -79,7 +92,6 @@ export class Game extends Phaser.Scene {
       boxContainer.add([boxImg, donut, text]);
 
       boxContainer.type = this.donutList[i];
-      boxContainer.donutCounts = 11;
       boxContainer.box = boxImg;
       boxContainer.donut = donut;
       boxContainer.text = text;
@@ -87,10 +99,13 @@ export class Game extends Phaser.Scene {
       this.boxes.push(boxContainer);
     }
 
-    this.maxScore = this.boxes.length * 11;
+    this.maxScore = this.boxes.length * this.donutsPerBox;
+
+    this.add.sprite(400, 600, "fingerclick").play("fingerclick");
   }
 
   onClickDonut(donut) {
+    // Check Winner
     if (this.currentScore >= this.maxScore) {
       if (!this.winner) {
         const winnerText = this.add
@@ -116,16 +131,9 @@ export class Game extends Phaser.Scene {
       return;
     }
 
+    // Handle donut
     if (donut.destroyed) return;
     donut.destroyed = true;
-
-    this.spawnParticle(donut.x, donut.y);
-
-    this.onCompliment();
-
-    donut.setSensor(true);
-    donut.setIgnoreGravity(true);
-    donut.setDepth(9999);
 
     let targetX = 0;
     let targetY = 0;
@@ -143,6 +151,12 @@ export class Game extends Phaser.Scene {
       }
     }
 
+    // Set donut status
+    donut.setSensor(true);
+    donut.setIgnoreGravity(true);
+    donut.setDepth(999);
+
+    // Move donut to box and popup box
     this.tweens.add({
       targets: donut,
       x: targetX,
@@ -185,6 +199,11 @@ export class Game extends Phaser.Scene {
         donut.destroy();
       },
     });
+
+    // Spawn star particle
+    this.spawnParticle(donut.x, donut.y);
+    // Spawn compliment
+    this.onCompliment();
   }
 
   onCompliment() {
@@ -214,6 +233,7 @@ export class Game extends Phaser.Scene {
     });
   }
 
+  // Spawn star particle
   spawnParticle(x, y) {
     this.add
       .particles(x, y, "star", {
@@ -224,6 +244,6 @@ export class Game extends Phaser.Scene {
         blendMode: "ADD",
         emitting: false,
       })
-      .explode(10);
+      .explode(15);
   }
 }

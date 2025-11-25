@@ -16,6 +16,11 @@ export class Preloader extends Phaser.Scene {
     // Load sounds
     this.load.audio("pop", "sounds/pop.mp3");
     this.load.audio("background_music", "sounds/background_music.mp3");
+    // Load finger click animation
+    this.load.spritesheet("fingerclick", "animations/fingerclick200x200.png", {
+      frameWidth: 200,
+      frameHeight: 200,
+    });
   }
 
   create() {
