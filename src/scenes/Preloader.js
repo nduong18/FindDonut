@@ -8,6 +8,7 @@ export class Preloader extends Phaser.Scene {
     // Set path
     this.load.setPath("assets");
     // Load images
+    this.load.image("box", "images/box.png");
     this.load.image("orange_donut", "images/orange_donut.png");
     this.load.image("blue_donut", "images/blue_donut.png");
     this.load.image("pink_donut", "images/pink_donut.png");

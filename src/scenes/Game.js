@@ -7,11 +7,13 @@ export class Game extends Phaser.Scene {
     this.complimentText = ["EXCELLENT JOB!", "GOOD JOB!", "GREAT JOB!"];
     this.boxes = [];
     this.winner = false;
+    this.currentScore = 0;
+    this.maxScore = 0;
   }
 
   create() {
     this.cameras.main.setBackgroundColor(0x313131);
-    this.sound.play("background_music", { loop: true, volume: 0.3 });
+    // this.sound.play("background_music", { loop: true, volume: 0.3 });
 
     const width = this.scale.width;
     const height = this.scale.height;
@@ -52,48 +54,68 @@ export class Game extends Phaser.Scene {
     }
 
     // Header
-    const boxW = 200;
-    const boxH = 200;
-    const boxCounts = this.donutList.length;
-    const totalBoxWidth = boxCounts * boxW;
-    const remainingSpace = width - totalBoxWidth;
-    const boxSpacing = remainingSpace / (boxCounts + 1);
-
     this.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, width, 300);
-    const boxY = 50;
 
+    // Box
+    const boxCounts = this.donutList.length;
+    const boxSpacingX = 250;
+    const boxY = 150;
     for (let i = 0; i < boxCounts; i++) {
-      const boxX = boxSpacing * (i + 1) + boxW * i;
-      const box = this.add
-        .graphics()
-        .fillStyle(0x3e3e3d, 1)
-        .fillRoundedRect(boxX, boxY, boxW, boxH, 20)
-        .lineStyle(10, 0x515657, 1)
-        .strokeRoundedRect(boxX, boxY, boxW, boxW, 20);
+      const boxX = 150 + boxSpacingX * i;
+      const boxContainer = this.add.container(boxX, boxY);
+      const boxImg = this.add.image(0, 0, "box");
+      const donut = this.add.image(0, -30, this.donutList[i]).setScale(0.5);
 
-      box.centerX = boxX + boxW / 2;
-      box.centerY = boxY + boxH / 2;
-
-      this.add
-        .image(boxX + boxW / 2, boxY + boxH / 3, this.donutList[i])
-        .setScale(0.5);
-      box.type = this.donutList[i];
-      box.donutCounts = 11;
-      box.text = this.add
-        .text(boxX + boxW / 2, boxY + boxH / 1.2, "x" + box.donutCounts, {
+      const text = this.add
+        .text(0, 60, "x11", {
           fontFamily: "Arial Black",
-          fontSize: "30px",
-          color: "#FFF",
+          fontSize: "50px",
+          color: "#ffffff",
           stroke: "#000000",
-          strokeThickness: 8,
+          strokeThickness: 10,
         })
         .setOrigin(0.5);
 
-      this.boxes.push(box);
+      boxContainer.add([boxImg, donut, text]);
+
+      boxContainer.type = this.donutList[i];
+      boxContainer.donutCounts = 11;
+      boxContainer.box = boxImg;
+      boxContainer.donut = donut;
+      boxContainer.text = text;
+
+      this.boxes.push(boxContainer);
     }
+
+    this.maxScore = this.boxes.length * 11;
   }
 
   onClickDonut(donut) {
+    if (this.currentScore >= this.maxScore) {
+      if (!this.winner) {
+        const winnerText = this.add
+          .text(400, 600, "WINNER", {
+            fontFamily: "Arial Black",
+            fontSize: "100px",
+            color: "#ffea00",
+            stroke: "#000000",
+            strokeThickness: 10,
+          })
+          .setOrigin(0.5);
+
+        this.tweens.add({
+          targets: winnerText,
+          scale: 1.2,
+          duration: 400,
+          yoyo: true,
+          loop: -1,
+          ease: "Linear",
+        });
+        this.winner = true;
+      }
+      return;
+    }
+
     if (donut.destroyed) return;
     donut.destroyed = true;
 
@@ -111,8 +133,8 @@ export class Game extends Phaser.Scene {
     for (let i = 0; i < this.boxes.length; i++) {
       const box = this.boxes[i];
       if (donut.type === box.type) {
-        targetX = box.centerX;
-        targetY = box.centerY;
+        targetX = box.x;
+        targetY = box.y;
         targetBox = box;
         if (box.donutCounts > 0) {
           box.donutCounts -= 1;
@@ -129,7 +151,36 @@ export class Game extends Phaser.Scene {
       ease: "Linear",
       onComplete: () => {
         if (targetBox) {
+          this.tweens.add({
+            targets: [targetBox.box, targetBox.text],
+            scale: 1.1,
+            duration: 200,
+            ease: "Linear",
+            yoyo: true,
+            onActive: () => {
+              targetBox.box.preFX.setPadding(32);
+              const fx = targetBox.box.preFX.addGlow();
+              this.tweens.add({
+                targets: fx,
+                color: 0xffea00,
+                outerStrength: 8,
+                duration: 400,
+                ease: "Linear",
+                onComplete: () => {
+                  fx.destroy();
+                },
+              });
+              this.tweens.add({
+                targets: targetBox.donut,
+                scale: 0.6,
+                duration: 200,
+                ease: "Linear",
+                yoyo: true,
+              });
+            },
+          });
           targetBox.text.setText("x" + targetBox.donutCounts);
+          this.currentScore += 1;
         }
         donut.destroy();
       },
@@ -146,7 +197,7 @@ export class Game extends Phaser.Scene {
         this.complimentText[index],
         {
           fontFamily: "Arial Black",
-          fontSize: "50px",
+          fontSize: "60px",
           color: "#FFF",
           stroke: "#000000",
           strokeThickness: 8,
