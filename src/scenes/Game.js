@@ -99,9 +99,7 @@ export class Game extends Phaser.Scene {
       boxContainer.box = boxImg;
       boxContainer.donut = donut;
       boxContainer.text = text;
-      boxContainer.box.originalScale = boxImg.scale;
-      boxContainer.text.originalScale = text.scale;
-      boxContainer.donut.originalScale = donut.scale;
+      boxContainer.originalScale = boxContainer.scale;
 
       this.boxes.push(boxContainer);
     }
@@ -156,16 +154,16 @@ export class Game extends Phaser.Scene {
         targetBox.text.setText("x" + targetBox.donutCounts);
 
         this.tweens.add({
-          targets: targetBox.box,
-          scale: targetBox.box.originalScale * 1.1,
+          targets: targetBox,
+          scale: targetBox.originalScale * 1.1,
           duration: 100,
           ease: "Linear",
           yoyo: true,
           // Add tween beblow to fix scale when spam click donut
           onComplete: () => {
             this.tweens.add({
-              targets: targetBox.box,
-              scale: targetBox.box.originalScale,
+              targets: targetBox,
+              scale: targetBox.originalScale,
               duration: 100,
               ease: "Linear",
             });
