@@ -70,23 +70,26 @@ export class Game extends Phaser.Scene {
     }
 
     // Header
-    this.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, width, 300);
+    this.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, width, 200);
 
     // Box
     const boxCounts = this.donutList.length;
     const boxSpacingX = 250;
-    const boxY = 150;
+    const boxY = 100;
     for (let i = 0; i < boxCounts; i++) {
       const boxX = 150 + boxSpacingX * i;
       const boxContainer = this.add.container(boxX, boxY);
-      const boxImg = this.add.image(0, 0, "box");
-      const donut = this.add.image(0, -30, this.donutList[i]).setScale(0.5);
+      const boxImg = this.add.image(0, 0, "box").setScale(0.8);
+
+      // Add donut image and glow
+      const donut = this.add.image(0, -25, this.donutList[i]).setScale(0.4);
+      donut.preFX.addGlow();
 
       boxContainer.donutCounts = this.donutsPerBox;
       const text = this.add
-        .text(0, 60, "x" + boxContainer.donutCounts, {
+        .text(0, 50, "x" + boxContainer.donutCounts, {
           fontFamily: "Arial Black",
-          fontSize: "50px",
+          fontSize: "35px",
           color: "#ffffff",
           stroke: "#000000",
           strokeThickness: 10,
@@ -95,6 +98,7 @@ export class Game extends Phaser.Scene {
 
       boxContainer.add([boxImg, donut, text]);
 
+      // Add boxContainer status
       boxContainer.type = this.donutList[i];
       boxContainer.box = boxImg;
       boxContainer.donut = donut;
@@ -202,10 +206,10 @@ export class Game extends Phaser.Scene {
         this.complimentText[index],
         {
           fontFamily: "Arial Black",
-          fontSize: "60px",
+          fontSize: "100px",
           color: "#FFF",
           stroke: "#000000",
-          strokeThickness: 8,
+          strokeThickness: 20,
         }
       )
       .setOrigin(0.5)
