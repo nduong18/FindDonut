@@ -6,16 +6,20 @@ export class Game extends Phaser.Scene {
     this.donutList = ["orange_donut", "blue_donut", "pink_donut"];
     this.complimentText = ["EXCELLENT JOB!", "GOOD JOB!", "GREAT JOB!"];
     this.boxes = [];
+    this.donuts = [];
     this.winner = false;
     this.currentScore = 0;
     this.maxScore = 0;
     this.donutsPerBox = 25;
-    this.donuts = [];
+    this.waitTime = 3;
+    this.lastClickTime = 0;
+    this.clicked = false;
+    this.guideDonut = null;
   }
 
   create() {
     this.cameras.main.setBackgroundColor(0x313131);
-    // this.sound.play("background_music", { loop: true, volume: 0.3 });
+    this.sound.play("background_music", { loop: true, volume: 0.3 });
 
     // Create finger click animations
     this.anims.create({
@@ -56,6 +60,7 @@ export class Game extends Phaser.Scene {
         const y = 300 - i * spacingY;
         let donut = this.matter.add.image(x, y, key);
         donut.type = key;
+        donut.destroyed = false;
 
         donut.setScale(0.5);
         donut.setCircle((donut.width * 0.5) / 2);
@@ -64,11 +69,10 @@ export class Game extends Phaser.Scene {
         donut.setMass(1.5);
 
         donut.setInteractive();
-        donut.on("pointerdown", () => this.onClickDonut(donut));
+        donut.on("pointerdown", (pointer) => this.onClickDonut(donut, pointer));
         this.donuts.push(donut);
       }
     }
-
     // Header
     this.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, width, 200);
 
@@ -110,13 +114,58 @@ export class Game extends Phaser.Scene {
 
     this.maxScore = this.boxes.length * this.donutsPerBox;
 
-    // this.add.sprite(400, 600, "fingerclick").play("fingerclick");
+    this.fingerclick = this.add
+      .sprite(400, 600, "fingerclick")
+      .play("fingerclick");
+    this.fingerclick.setVisible(false);
+
+    this.lastClickTime = performance.now();
+    this.clicked = false;
+
+    this.input.on("pointerdown", () => {
+      this.lastClickTime = performance.now();
+      this.fingerclick.setVisible(false);
+      this.clicked = false;
+    });
   }
 
-  onClickDonut(donut) {
+  update() {
+    if (!this.winner) {
+      if (!this.guideDonut && this.donuts.length > 0) {
+        const visibleDonuts = this.donuts.filter(
+          (d) =>
+            d.x >= 50 &&
+            d.x <= this.scale.width - 50 &&
+            d.y >= 300 &&
+            d.y <= this.scale.height - 50
+        );
+
+        if (visibleDonuts.length > 0) {
+          const randomIndex = Phaser.Math.Between(0, visibleDonuts.length - 1);
+          const donut = visibleDonuts[randomIndex];
+          this.guideDonut = donut;
+          this.fingerclick.setPosition(donut.x + 30, donut.y);
+        }
+      }
+
+      const elapsed = (performance.now() - this.lastClickTime) / 1000;
+      if (!this.clicked && elapsed >= this.waitTime) {
+        this.fingerclick.setVisible(true);
+        this.clicked = true;
+        this.guideDonut = null;
+      }
+    }
+  }
+
+  onClickDonut(donut, pointer) {
+    if (pointer.y < 200) return;
     // Handle donut
     if (donut.destroyed) return;
     donut.destroyed = true;
+
+    // Remove donut from donuts
+    const index = this.donuts.indexOf(donut);
+    if (index != -1) this.donuts.splice(index, 1);
 
     let targetX = 0;
     let targetY = 0;
@@ -132,6 +181,9 @@ export class Game extends Phaser.Scene {
           donut.setSensor(true);
           donut.setIgnoreGravity(true);
           donut.setDepth(999);
+          donut.setStatic(true);
+          donut.setVelocity(0, 0);
+          donut.setAngle(0);
 
           box.donutCounts -= 1;
           this.currentScore += 1;
@@ -181,7 +233,7 @@ export class Game extends Phaser.Scene {
           targets: fx,
           color: 0xffea00,
           outerStrength: 8,
-          duration: 200,
+          duration: 150,
           ease: "Linear",
           onComplete: () => {
             fx.destroy();
