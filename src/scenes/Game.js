@@ -1,4 +1,3 @@
-// "Every great game begins with a single scene. Let's make this one unforgettable!"
 export class Game extends Phaser.Scene {
   constructor() {
     super("Game");
@@ -15,6 +14,8 @@ export class Game extends Phaser.Scene {
     this.lastClickTime = 0;
     this.clicked = false;
     this.guideDonut = null;
+    this.guideGlowFx = null;
+    this.isShuffled = false;
   }
 
   create() {
@@ -45,11 +46,13 @@ export class Game extends Phaser.Scene {
       isStatic: true,
     }); // right
 
-    const spacingX = 120;
+    // Spacing between donuts
+    const spacingX = 100;
     const spacingY = 120;
 
+    // Cols and rows to spawn
     const cols = Math.floor((width - 80) / spacingX);
-    const rows = 30;
+    const rows = 20;
 
     // Spawn Donuts
     for (let i = 0; i < rows; i++) {
@@ -64,16 +67,17 @@ export class Game extends Phaser.Scene {
 
         donut.setScale(0.5);
         donut.setCircle((donut.width * 0.5) / 2);
-        donut.setBounce(0.2);
-        donut.setFriction(0.05);
-        donut.setMass(1.5);
+        donut.setBounce(0);
+        donut.setFriction(1);
+        donut.setMass(1);
 
         donut.setInteractive();
         donut.on("pointerdown", (pointer) => this.onClickDonut(donut, pointer));
         this.donuts.push(donut);
       }
     }
-    // Header
+
+    // Create Black Header
     this.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, width, 200);
 
     // Box
@@ -121,6 +125,7 @@ export class Game extends Phaser.Scene {
 
     this.lastClickTime = performance.now();
     this.clicked = false;
+    this.time.delayedCall(this.waitTime * 1000, this.showGuide, [], this);
 
     this.input.on("pointerdown", () => {
       this.lastClickTime = performance.now();
@@ -129,35 +134,73 @@ export class Game extends Phaser.Scene {
     });
   }
 
-  update() {
-    if (!this.winner) {
-      if (!this.guideDonut && this.donuts.length > 0) {
-        const visibleDonuts = this.donuts.filter(
-          (d) =>
-            d.x >= 50 &&
-            d.x <= this.scale.width - 50 &&
-            d.y >= 300 &&
-            d.y <= this.scale.height - 50
-        );
+  update() {}
 
-        if (visibleDonuts.length > 0) {
-          const randomIndex = Phaser.Math.Between(0, visibleDonuts.length - 1);
-          const donut = visibleDonuts[randomIndex];
-          this.guideDonut = donut;
-          this.fingerclick.setPosition(donut.x + 30, donut.y);
-        }
-      }
+  showGuide() {
+    if (this.winner || this.donuts.length === 0) return;
 
-      const elapsed = (performance.now() - this.lastClickTime) / 1000;
-      if (!this.clicked && elapsed >= this.waitTime) {
-        this.fingerclick.setVisible(true);
-        this.clicked = true;
-        this.guideDonut = null;
-      }
+    // Shuffled
+    if (!this.isShuffled) {
+      Phaser.Utils.Array.Shuffle(this.donuts);
+      this.isShuffled = true;
     }
+
+    // Find
+    const visibleDonuts = this.donuts.filter((d) => {
+      const box = this.boxes.find((b) => b.type === d.type);
+      return (
+        d.x >= 200 &&
+        d.x <= this.scale.width - 200 &&
+        d.y >= 300 &&
+        d.y <= this.scale.height - 400 &&
+        box &&
+        box.donutCounts > 0
+      );
+    });
+
+    if (visibleDonuts.length === 0) return;
+
+    const randomIndex = Phaser.Math.Between(0, visibleDonuts.length - 1);
+    const donut = visibleDonuts[randomIndex];
+    this.guideDonut = donut;
+
+    // Show finger
+    const offset = 50;
+    this.fingerclick.setVisible(true);
+    this.fingerclick.x = donut.x - offset;
+    this.fingerclick.y = donut.y + offset;
+
+    if (this.guideGlowFx) this.guideGlowFx.destroy();
+    this.guideGlowFx = donut.preFX.addGlow();
+
+    this.clicked = true;
+    this.guideDonut = null;
+  }
+
+  scheduleNextGuide() {
+    if (this.winner || this.donuts.length === 0) return;
+
+    if (this.guideTimer) {
+      this.guideTimer.remove();
+    }
+
+    this.guideTimer = this.time.delayedCall(
+      this.waitTime * 1000,
+      () => {
+        this.showGuide();
+        this.guideTimer = null;
+      },
+      [],
+      this
+    );
   }
 
   onClickDonut(donut, pointer) {
+    if (this.guideGlowFx) {
+      this.guideGlowFx.destroy();
+      this.guideGlowFx = null;
+    }
+
     if (pointer.y < 200) return;
     // Handle donut
     if (donut.destroyed) return;
@@ -246,6 +289,11 @@ export class Game extends Phaser.Scene {
     this.spawnParticle(donut.x, donut.y);
     // Spawn compliment
     this.onCompliment();
+
+    this.clicked = false;
+    this.guideDonut = null;
+    this.fingerclick.setVisible(false);
+    this.scheduleNextGuide();
   }
 
   onCompliment() {
