@@ -1,6 +1,6 @@
-# DonutMatch - PhaserJS - Playable Ads
+# FindDonut - PhaserJS - Playable Ads
 
-## [Play Here](https://nduong18.github.io/DonutMatch/)
+## [Play Here](https://nduong18.github.io/FindDonut/)
 
 ### How to play: coming soon!
 
